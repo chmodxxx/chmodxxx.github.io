@@ -5,7 +5,7 @@ tags: web, ctf, rce, insomnihack
 ---
 
 # Description
-You can host your l33t pictures here.
+You can host your l33t pictures <a href="#">here</a>.
 
 # The Challenge
 This challenge was a PHP challenge that allowed users to upload files in custom folder, the source code was given :
