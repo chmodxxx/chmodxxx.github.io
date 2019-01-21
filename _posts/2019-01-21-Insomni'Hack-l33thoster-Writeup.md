@@ -102,16 +102,31 @@ Also the challenge suggested we couldn't use php tags `<?`, and  we need to make
 
 # Solving the challenge
 
-The challenge is basically asking for a `.htaccess` upload while bypassing all restrictions, we need a valid image header that will not break `.htaccess` syntax, which is `wbmp` , we craft our `.htaccess` file and add a directive to make our custom extension files be interpreted as `PHP`.
+The challenge is basically asking for a `.htaccess` upload while bypassing all restrictions, we need a valid image header that will not break `.htaccess` syntax, which is `wbmp` because it starts with a null byte and `.htaccess` will ignore that line, we craft our `.htaccess` file and add a directive to make our custom extension files be interpreted as `PHP`.
 ![screen1.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen1.png)
 We do the same thing to upload our php file with the custom extension the content isn't important.
-![screen2.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen1.png)
+![screen2.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen2.png)
 
 The next step is to edit `.htaccess` file and add two more directives, the first one is disable php session upload_progress cleanup, and the second one is append file which will be a custom session one.
 
-![screen3.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen1.png)
+![screen3.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen3.png)
 Note that PHP_SESSION_UPLOAD_PROGRESS will create a session file for me, and disabling the cleanup will not remove my files so I don't need to do any kind of race conditions.
 
 ```sh
 curl -vvv http://35.246.234.136/images/cce36633671a3a556973a0b2d3592fe4371a5bde/test.xyz -H 'Cookie: PHPSESSID=xyz' -F "PHP_SESSION_UPLOAD_PROGRESS=whatever" -F "file=@/etc/passwd"
 ```
+Now requesting our `.xyz` file in the browser shows some serialized data with interested reflected values
+![screen4.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen4.png)
+so the file parameter is reflected here it's `file` and also whatever I put in PHP_SESSION_UPLOAD_PROGRESS, i'm gonna use one of them to inject my php code.
+I'm going to intercept my curl request in burp and edit one of the parameters.
+```sh
+export http_proxy="http://127.0.0.1:8080/"
+curl -vvv http://35.246.234.136/images/cce36633671a3a556973a0b2d3592fe4371a5bde/test.xyz -H 'Cookie: PHPSESSID=xyz' -F "PHP_SESSION_UPLOAD_PROGRESS=whatever" -F "file=@/etc/passwd"
+```
+![screen5.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen5.png)
+I changed the PHPSESSID value because the old one wasn't deleted, so we need to use a new one, need to change it in `.htaccess` as well.
+Let's request our file in the browser and enjoy RCE.
+![screen6.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen6.png)
+Trying various command execution functions results in nothing so we'd better check `phpinfo`
+![screen8.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen8.png)
+It seems that `mail()` and `putenv()` aren't filtered, so we could overwrite `LD_PRELOAD` to our custom `.so` file and overwrite some function that mail calls
