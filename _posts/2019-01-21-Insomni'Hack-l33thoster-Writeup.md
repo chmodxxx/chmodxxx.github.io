@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Insomni'Hack teaser 2019 l33thoster writeup
+tags: web, ctf, rce, insomnihack
 ---
 
 # Description
@@ -182,3 +183,4 @@ $ php -f /tmp/file.php
 
 INS{l33t_l33t_l33t_ich_hab_d1ch_li3b}
 ```
+The flag is `INS{l33t_l33t_l33t_ich_hab_d1ch_li3b}`.
