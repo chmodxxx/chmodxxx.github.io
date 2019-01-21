@@ -102,4 +102,4 @@ Also the challenge suggested we couldn't use php tags `<?`, and  we need to make
 # Solving the challenge
 
 The challenge is basically asking for a `.htaccess` upload while bypassing all restrictions, we need a valid image header that will not break `.htaccess` syntax, which is `wbmp` , we craft our `.htaccess` file and add a directive to make our custom extension files be interpreted as `PHP`.
-![Branching](../img/screen1.png)
+![screen1.png]({{ site.url }}/assets/2019-01-21-Insomni'Hack-l33thoster-Writeup/screen1.png)
