@@ -220,7 +220,7 @@ and
 we can again change our code and when we change the size to 0x71, we partially overwrite the fd to point near &stdout-0x43
 why ? :
 when the binary calls `puts`, `puts` internally will call a function named `_IO_new_file_xsputn` which will call eventually `_IO_new_file_overflow`
-```C
+```c
 size_t  _IO_new_file_xsputn (FILE *f, const void *data, size_t n)
 {
     const char *s = (const char *) data;
@@ -238,7 +238,7 @@ size_t  _IO_new_file_xsputn (FILE *f, const void *data, size_t n)
 ```
 
 
-```C
+```c
 int _IO_new_file_overflow (_IO_FILE *f, int ch)
 {
   if (f->_flags & _IO_NO_WRITES) /* SET ERROR */
@@ -262,7 +262,7 @@ int _IO_new_file_overflow (_IO_FILE *f, int ch)
 
 `_IO_do_write`  will call `new_do_write`
 
-```C
+```c
 static
 _IO_size_t
 new_do_write (_IO_FILE *fp, const char *data, _IO_size_t to_do)
@@ -288,7 +288,7 @@ new_do_write (_IO_FILE *fp, const char *data, _IO_size_t to_do)
 
 and `_IO_SYSWRITE` is basically `write`
 
-```C++
+```c
 #define _IO_SYSWRITE(FP, DATA, LEN) JUMP2 (__write, FP, DATA, LEN)
 ```
 
