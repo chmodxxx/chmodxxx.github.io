@@ -195,6 +195,7 @@ we will use
 ```python
 free(0)
 free(2)
+free(0)
 free(1)
 ```
 Now the bins look like :
