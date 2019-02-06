@@ -17,7 +17,7 @@ This blog post will explain how to achieve a leak or full rce in leakless binari
 *   We can at maximum allocate `15` chunks in total.
 *   The binary has full protections.
 
-![screen1.png]({{ site.url }}/assets/screen1.png)
+![screen1.png]({{ site.url }}/assets/images/screen1.png)
 
 # The exploit: 
 
