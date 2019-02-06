@@ -9,7 +9,7 @@ This blog post will explain how to achieve a leak or full rce in leakless binari
 
 # Assumptions:
 
-*   The exploit will be developped in `glibc2.24` _(it can work in tcache as well)_.
+*   The exploit will be developped in `glibc2.24` _(it can work with tcache as well)_.
 *   We will have someway to control size of a chunk , off by one bug or double free can work.
 *   We will be using a double free attack _(fastbin dup)_ .
 *   The binary has only the option to malloc and free.
@@ -17,7 +17,7 @@ This blog post will explain how to achieve a leak or full rce in leakless binari
 *   We can at maximum allocate `15` chunks in total.
 *   The binary has full protections.
 
-![screen1.png]({{ site.url }}/assets/images/screen1.png)
+![screen1.png]({{ site.url }}/assets/2019-02-06-Leakless-Heap-Feng-Shui/screen1.png)
 
 # The exploit: 
 
