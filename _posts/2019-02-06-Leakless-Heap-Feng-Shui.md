@@ -296,7 +296,8 @@ and `_IO_SYSWRITE` is basically `write`
 we also need to set `fp->_IO_IS_APPENDING`
 
 ```python
-malloc(0x70-8, 'D'*27 + p64(0x0)*3 + p64(0xfbad1800) + p64(0x0)*3 + "\x08")```
+malloc(0x70-8, 'D'*27 + p64(0x0)*3 + p64(0xfbad1800) + p64(0x0)*3 + "\x08")
+```
 
 
 Finally we will use the address at &stdout-0x71 , because it is the only viable place with a valid size (0x7f) before &stdout:
