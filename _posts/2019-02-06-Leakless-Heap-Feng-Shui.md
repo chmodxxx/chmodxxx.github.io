@@ -13,9 +13,11 @@ This blog post will explain how to achieve a leak or full rce in leakless binari
 *   We will have someway to control size of a chunk , off by one bug or double free can work.
 *   We will be using a double free attack _(fastbin dup)_ .
 *   The binary has only the option to malloc and free.
-*   The binary has full protections.
 *   Malloc size limit is `0x80`.
 *   We can at maximum allocate `15` chunks in total.
+*   The binary has full protections.
+
+![checksec.png]({{ site.url }}/assets/images/checksec.png)
 
 # The exploit: 
 
